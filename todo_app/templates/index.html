@@ -9,6 +9,19 @@
                 list-style: none;
                 padding: 0;
                 margin: 0;
+                width: 200px;
+            }
+            li {
+                clear: both;
+            }
+            li button {
+                -webkit-appearance: none;
+                border: none;
+                outline: none;
+                color: red;
+                float: right;
+                cursor: pointer;
+                font-size: 20px;
             }
         </style>
     </head>
@@ -20,10 +33,15 @@
         <div id="error" class="hidden">Something went wrong!</div>
         <ul id="todos">
             {% for d in data %}
-            <li><input class="check-completed" data-id="{{ d.id }}" type="checkbox" {% if d.completed %} checked {% endif %}/> {{d.description }}</li>
+            <li><input class="check-completed" data-id="{{ d.id }}" 
+                type="checkbox" {% if d.completed %} checked {% endif %}/> 
+                {{d.description }}
+                <button class="delete-item" data-id="{{ d.id }}">&cross;</button>
+            </li>
             {% endfor %}
         </ul>
         <script>
+            // toggle item checkbox
             const checkboxes = document.querySelectorAll('.check-completed');
             for (let i = 0; i < checkboxes.length; i++) {
                 const checkbox = checkboxes[i];
@@ -49,6 +67,26 @@
 
                 }
             }
+
+            // delete item
+            const delete_buttons = document.querySelectorAll('.delete-item');
+            for(let i = 0; i < delete_buttons.length; i++) {
+                const delete_button = delete_buttons[i];
+                delete_button.onclick = function(e) {
+                    console.log('delete button clicked: ', e)
+                    const todoId = e.target.dataset['id'];
+                    fetch('todos/' + todoId, {
+                        method: 'DELETE'
+                    })
+                    .then(function(jsonResponse) {
+                        document.getElementById('error').className = 'hidden';
+                    })
+                    .catch(function() {
+                    document.getElementById('error').className = '';
+                    });
+                }
+            }
+
             document.getElementById('form').onsubmit = function(e) {
                 e.preventDefault();
                 fetch('/todos/create', {
