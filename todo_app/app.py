@@ -1,3 +1,4 @@
+from os import abort
 import sys
 from unittest.result import failfast
 from flask import Flask, render_template, request, redirect, url_for, jsonify
@@ -45,6 +46,72 @@ def get_list_todos(list_id):
     todos=Todo.query.filter_by(list_id=list_id).order_by('id').all())
 
 
+@app.route('/lists/create', methods=['POST'])
+def create_list():
+    error = False
+    body = {}
+    try:
+        name = request.get_json()['name']
+        todo_list = TodoList(name=name)
+        db.session.add(todo_list)
+        db.session.commit()
+        body['id'] = todo_list.id
+        body['name'] = todo_list.name
+    except:
+        db.session.rollback()
+        error = True
+        print(sys.exc_info)
+    finally:
+        db.session.close()
+
+    if error:
+        abort(500)
+    else:
+        return jsonify(body)
+
+
+@app.route('/lists/<list_id>/set-completed', methods=['POST'])
+def set_completed_list(list_id):
+    error = False
+    try:
+        list = TodoList.query.get(list_id)
+        for todo in list.todos:
+            todo.completed = True
+        
+        db.session.commit()
+    except:
+        db.session.rollback()
+        error = True
+    finally:
+        db.session.close()
+
+    if error:
+        abort(500)
+    else:
+        return '', 200
+
+
+@app.route('/lists/<list_id>/delete', methods=['DELETE'])
+def delete_list(list_id):
+    error = False
+    try:
+        list = TodoList.query.get(list_id)
+        for todo in list.todos:
+            db.session.delete(todo)
+        
+        db.session.delete(list)
+        db.session.commit()
+    except:
+        db.session.rollback()
+        error = True
+    finally:
+        db.session.close()
+
+    if error:
+        abort(500)
+    else:
+        return jsonify({'success': True})
+
 
 @app.route('/todos/create', methods=['POST'])
 def create_todo():
@@ -52,7 +119,8 @@ def create_todo():
     body = {}
     try:
         description = request.get_json()['description']
-        todo = Todo(description=description)
+        list_id = request.get_json()['list_id']
+        todo = Todo(description=description, list_id=list_id)
         db.session.add(todo)
         db.session.commit()
         body['id'] = todo.id
@@ -65,7 +133,9 @@ def create_todo():
     finally:
         db.session.close()
     
-    if not error:
+    if error:
+        abort(500)
+    else:
         return jsonify(body)
 
 
@@ -84,7 +154,7 @@ def set_completed_todo(todo_id):
     return redirect(url_for('index'))
 
 
-@app.route('/todos/<todo_id>', methods=['DELETE'])
+@app.route('/todos/<todo_id>/delete', methods=['DELETE'])
 def delete_todo_item(todo_id):
     try:
         todo = Todo.query.get(todo_id)

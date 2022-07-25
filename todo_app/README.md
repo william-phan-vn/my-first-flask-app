@@ -7,7 +7,7 @@ flask db init
 ```
 - Sync models
 ```
-flask db migrate
+flask db migrate -m "<custom file name>"
 ```
 - Upgrate migration
 ```
